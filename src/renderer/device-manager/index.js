@@ -1,27 +1,34 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
-export default class DeviceManager extends React.Component {
-  constructor () {
-    super()
-    this.state = {
-      deviceInfo: null
-    }
+import makeCancellable from '../../lib/make-cancellable'
+import { getServerInfo } from '../../lib/server'
+
+export default function DeviceManager ({ device }) {
+  const [deviceInfo, setDeviceInfo] = useState(null)
+
+  useEffect(() => {
+    setDeviceInfo(null)
+    const [cancel, onDeviceInfo] = makeCancellable((_err, info) => setDeviceInfo(info))
+    getServerInfo(device.addr, onDeviceInfo)
+
+    return cancel
+  }, [device.addr])
+
+  if (!deviceInfo) {
+    return <div>Fetching info...</div>
   }
 
-  componentDidMount () {
-    //
-  }
-
-  render () {
-    return (
-      <div>
-        <div className='sidebar'>
-          <div className='slideshow-preview' />
-          <div className='device-info' />
-          <div className='save-changes-prompt' />
+  return (
+    <div>
+      <div className='sidebar'>
+        <div className='slideshow-preview' />
+        <div className='device-info'>
+          <h2>{deviceInfo.name}</h2>
+          Slide delay: {deviceInfo.slideTime}
         </div>
-        <div className='photo-manager' />
+        <div className='save-changes-prompt' />
       </div>
-    )
-  }
+      <div className='photo-manager' />
+    </div>
+  )
 }

@@ -1,6 +1,6 @@
-# Lumos
+# Lumos Control
 
-Lumos is a media screen app designed for the Raspberry Pi.
+Lumos Control is a control app for Lumos, a media screen app designed for the Raspberry Pi.
 
 ## Installation
 
@@ -11,6 +11,8 @@ npm install
 npm start
 ```
 
-By default, Lumos looks for pictures in `~/.lumos_images`. You should create this directory and fill it with images for it to display before running the app. If you would like Lumos to load images from another folder, pass it to the `LUMOS_IMAGE_DIR` environment variable.
+The control software will search for any Lumos enabled devices on the same network as the control software.
 
-To start Lumos in fullscreen mode, set the `LUMOS_FULLSCREEN` environment variable.
+## Installing Lumos
+
+See the [Lumos repository](https://github.com/BinaryMuse/lumos) for info on how to install Lumos.

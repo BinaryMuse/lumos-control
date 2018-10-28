@@ -1,44 +1,19 @@
 import dgram from 'dgram'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 const PORT = 20105
 const MULTICAST_ADDR = '233.255.255.255'
 
 // TODO: add spinner for "searching" state
-class LumosDiscoveryBroadcast {
-  constructor (callback) {
-    this.callback = callback
+function discoveryBroadcast (addr, port, callback) {
+  let socket = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+
+  function onListening () {
+    socket.addMembership(MULTICAST_ADDR)
   }
 
-  start () {
-    this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-    this.socket.on('listening', this.onListening.bind(this))
-    this.socket.on('message', this.onMessage.bind(this))
-    this.socket.bind(PORT)
-    this.interval = setInterval(this.sendBroadcast.bind(this), 3000)
-  }
-
-  stop () {
-    if (this.interval) {
-      clearInterval(this.interval)
-      delete this.interval
-    }
-    this.socket.close()
-    delete this.socket
-  }
-
-  sendBroadcast () {
-    const data = JSON.stringify({ source: 'lumos', type: 'discovery-search' })
-    const message = Buffer.from(data)
-    this.socket.send(message, 0, message.length, PORT, MULTICAST_ADDR)
-  }
-
-  onListening () {
-    this.socket.addMembership(MULTICAST_ADDR)
-  }
-
-  onMessage (message, rinfo) {
+  function onMessage (message, rinfo) {
     try {
       message = message.toString()
       const data = JSON.parse(message)
@@ -46,61 +21,64 @@ class LumosDiscoveryBroadcast {
         return
       }
 
-      this.callback(data)
+      callback(data)
     } catch (err) {
       // do nothing
     }
   }
-}
 
-export default class DeviceSelect extends React.Component {
-  constructor () {
-    super()
-    this.broadcast = new LumosDiscoveryBroadcast(this.handleDeviceDetected.bind(this))
-    this.state = {
-      searching: false,
-      devices: {}
+  function sendBroadcast () {
+    const data = JSON.stringify({ source: 'lumos', type: 'discovery-search' })
+    const message = Buffer.from(data)
+    socket.send(message, 0, message.length, port, addr)
+  }
+
+  socket.on('message', onMessage)
+  socket.bind(port, onListening)
+
+  let interval = setInterval(sendBroadcast, 3000)
+
+  return function unsubscribe () {
+    if (interval) {
+      clearInterval(interval)
+      interval = null
+    }
+    if (socket) {
+      socket.off('message', onMessage)
+      socket.close()
+      socket = null
     }
   }
+}
 
-  componentDidMount () {
-    this.broadcast.start()
+export default function DeviceSelect ({ onSelectDevice }) {
+  const [devices, setDevices] = useState({})
+
+  function onDeviceDetected (device) {
+    const newDevices = { ...devices, [device.addr]: device }
+    setDevices(newDevices)
   }
 
-  componentWillUnmount () {
-    this.broadcast.stop()
-  }
+  useEffect(function subscribeToDiscoveryBroadcast () {
+    const unsubscribe = discoveryBroadcast(MULTICAST_ADDR, PORT, onDeviceDetected)
+    return () => unsubscribe()
+  }, [])
 
-  render () {
-    return (
-      <div>
-        <ul>
-          {Object.keys(this.state.devices).map(this.renderDevice.bind(this))}
-        </ul>
-      </div>
-    )
-  }
-
-  renderDevice (dev) {
-    dev = this.state.devices[dev]
-    return (
-      <li key={dev.addr}>
-        <a onClick={() => this.selectDevice(dev)}>
-          {dev.addr} (Lumos version {dev.version})
-        </a>
-      </li>
-    )
-  }
-
-  handleDeviceDetected (devInfo) {
-    this.setState({
-      devices: {
-        [devInfo.addr]: devInfo
-      }
-    })
-  }
-
-  selectDevice (device) {
-    this.props.onSelectDevice(device)
-  }
+  return (
+    <div>
+      <div>Searching for devices...</div>
+      <ul>
+        {Object.keys(devices).map((deviceAddr) => {
+          const device = devices[deviceAddr]
+          return (
+            <li key={device.addr}>
+              <a onClick={() => onSelectDevice(device)}>
+                {device.addr} (Lumos version {device.version})
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }

@@ -66,13 +66,17 @@ export default function DeviceSelect ({ onSelectDevice }) {
 
   return (
     <div>
-      <div>Searching for devices...</div>
+      <h2>Searching for devices...</h2>
       <ul>
         {Object.keys(devices).map((deviceAddr) => {
           const device = devices[deviceAddr]
+          const onClick = (e) => {
+            e.preventDefault()
+            onSelectDevice(device)
+          }
           return (
             <li key={device.addr}>
-              <a onClick={() => onSelectDevice(device)}>
+              <a href='#' onClick={onClick}>
                 {device.addr} (Lumos version {device.version})
               </a>
             </li>

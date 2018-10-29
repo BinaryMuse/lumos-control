@@ -1,6 +1,6 @@
 import dgram from 'dgram'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 const PORT = 20105
 const MULTICAST_ADDR = '233.255.255.255'
@@ -53,14 +53,17 @@ function discoveryBroadcast (addr, port, callback) {
 
 export default function DeviceSelect ({ onSelectDevice }) {
   const [devices, setDevices] = useState({})
+  const onDeviceDetected = useRef()
 
-  function onDeviceDetected (device) {
-    const newDevices = { ...devices, [device.addr]: device }
-    setDevices(newDevices)
-  }
+  useEffect(() => {
+    onDeviceDetected.current = function onDeviceDetected (device) {
+      const newDevices = { ...devices, [device.addr]: device }
+      setDevices(newDevices)
+    }
+  }, [devices])
 
   useEffect(function subscribeToDiscoveryBroadcast () {
-    const unsubscribe = discoveryBroadcast(MULTICAST_ADDR, PORT, onDeviceDetected)
+    const unsubscribe = discoveryBroadcast(MULTICAST_ADDR, PORT, (...args) => onDeviceDetected.current(...args))
     return () => unsubscribe()
   }, [])
 

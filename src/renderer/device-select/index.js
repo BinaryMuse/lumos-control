@@ -55,8 +55,7 @@ export default function DeviceSelect ({ onSelectDevice }) {
   const [devices, setDevices] = useState({})
 
   function onDeviceDetected (device) {
-    const newDevices = { ...devices, [device.addr]: device }
-    setDevices(newDevices)
+    setDevices(devices => ({ ...devices, [device.addr]: device }))
   }
 
   useEffect(function subscribeToDiscoveryBroadcast () {
